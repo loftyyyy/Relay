@@ -25,5 +25,10 @@ Thumbs.db
 ### Logs ###
 *.log
 
+### Environment ###
+.env
+.env.local
+.env.*.local
+
 ### FRONTEND PRD files ###
 FRONTEND*.md

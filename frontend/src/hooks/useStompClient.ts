@@ -8,10 +8,8 @@ import { useInboxStore } from '../store/inboxStore';
 import { SignJWT } from 'jose';
 import type { ChatMessage } from '../types/chat';
 
-const JWT_SECRET_B64 = 'ZXhjaXRlbWVudHNvaWxzaXN0ZXJkZXNlcnRjbG9zZXRydXRoZHJpZWRvdXR0cm91Ymw=';
-
 async function generateToken(username: string): Promise<string> {
-  const secret = Uint8Array.from(atob(JWT_SECRET_B64), (c) => c.charCodeAt(0));
+  const secret = Uint8Array.from(atob(import.meta.env.VITE_JWT_SECRET), (c) => c.charCodeAt(0));
   return await new SignJWT({})
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(username)
@@ -25,8 +23,10 @@ export function useStompClient() {
 
   const { username, token, login } = useAuthStore();
   const { setStatus } = useConnectionStore();
-  const { addMessage: addRoomMessage, activeRoom, rooms } = useRoomsStore();
+  const { addMessage: addRoomMessage, activeRoom } = useRoomsStore();
   const { addMessage: addInboxMessage } = useInboxStore();
+  const roomsRef = useRef(useRoomsStore.getState().rooms);
+  useRoomsStore.subscribe((state) => { roomsRef.current = state.rooms; });
 
   useEffect(() => {
     if (!username || !token) return;
@@ -36,8 +36,10 @@ export function useStompClient() {
       reconnectDelay: 5000,
       onConnect: () => {
         setStatus('connected');
+        subsRef.current.clear();
 
-        rooms.forEach((roomId) => {
+        const currentRooms = roomsRef.current;
+        currentRooms.forEach((roomId) => {
           const sub = client.subscribe(`/topic/rooms/${roomId}`, (msg) => {
             const chatMessage: ChatMessage = JSON.parse(msg.body);
             addRoomMessage(roomId, chatMessage);
@@ -101,7 +103,8 @@ export function useStompClient() {
         content,
         roomId,
         type: 'CHAT',
-      } satisfies Omit<ChatMessage, 'sender'>),
+        sender: username ?? '',
+      } satisfies ChatMessage),
     });
   };
 
@@ -115,7 +118,8 @@ export function useStompClient() {
         content,
         roomId: targetUser,
         type: 'CHAT',
-      } satisfies Omit<ChatMessage, 'sender'>),
+        sender: username ?? '',
+      } satisfies ChatMessage),
     });
   };
 
