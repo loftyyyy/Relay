@@ -8,10 +8,12 @@ import { useInboxStore } from '../store/inboxStore';
 import { SignJWT } from 'jose';
 import type { ChatMessage } from '../types/chat';
 
-const JWT_SECRET_B64 = import.meta.env.VITE_JWT_SECRET || 'ZXhjaXRlbWVudHNvaWxzaXN0ZXJkZXNlcnRjbG9zZXRydXRoZHJpZWRvdXR0cm91Ymw=';
-
 async function generateToken(username: string): Promise<string> {
-  const secret = Uint8Array.from(atob(JWT_SECRET_B64), (c) => c.charCodeAt(0));
+  const secretB64 = import.meta.env.VITE_JWT_SECRET;
+  if (!secretB64) {
+    throw new Error('VITE_JWT_SECRET is not set. Create frontend/.env with VITE_JWT_SECRET=<base64-encoded-secret>');
+  }
+  const secret = Uint8Array.from(atob(secretB64), (c) => c.charCodeAt(0));
   return await new SignJWT({})
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(username)
