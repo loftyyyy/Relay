@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Client } from '@stomp/stompjs';
+import { Client, type StompSubscription } from '@stomp/stompjs';
 import SockJS from 'sockjs-client/dist/sockjs.min.js';
 import { useAuthStore } from '../store/authStore';
 import { useConnectionStore } from '../store/connectionStore';
@@ -21,7 +21,7 @@ async function generateToken(username: string): Promise<string> {
 
 export function useStompClient() {
   const clientRef = useRef<Client | null>(null);
-  const subscriptionsRef = useRef<Set<string>>(new Set());
+  const subsRef = useRef<Map<string, StompSubscription>>(new Map());
 
   const { username, token, login } = useAuthStore();
   const { setStatus } = useConnectionStore();
@@ -42,7 +42,7 @@ export function useStompClient() {
             const chatMessage: ChatMessage = JSON.parse(msg.body);
             addRoomMessage(roomId, chatMessage);
           });
-          subscriptionsRef.current.add(roomId);
+          subsRef.current.set(roomId, sub);
         });
 
         client.subscribe('/user/queue/messages', (msg) => {
@@ -67,19 +67,28 @@ export function useStompClient() {
     return () => {
       client.deactivate();
       clientRef.current = null;
+      subsRef.current.clear();
     };
   }, [username, token]);
 
   const subscribeToRoom = (roomId: string) => {
     const client = clientRef.current;
     if (!client || !client.connected) return;
-    if (subscriptionsRef.current.has(roomId)) return;
+    if (subsRef.current.has(roomId)) return;
 
-    client.subscribe(`/topic/rooms/${roomId}`, (msg) => {
+    const sub = client.subscribe(`/topic/rooms/${roomId}`, (msg) => {
       const chatMessage: ChatMessage = JSON.parse(msg.body);
       addRoomMessage(roomId, chatMessage);
     });
-    subscriptionsRef.current.add(roomId);
+    subsRef.current.set(roomId, sub);
+  };
+
+  const unsubscribeFromRoom = (roomId: string) => {
+    const sub = subsRef.current.get(roomId);
+    if (sub) {
+      sub.unsubscribe();
+      subsRef.current.delete(roomId);
+    }
   };
 
   const sendMessage = (content: string, roomId: string) => {
@@ -115,5 +124,5 @@ export function useStompClient() {
     login(username, token);
   };
 
-  return { connect, sendMessage, sendPrivateMessage, subscribeToRoom };
+  return { connect, sendMessage, sendPrivateMessage, subscribeToRoom, unsubscribeFromRoom };
 }

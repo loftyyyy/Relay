@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useInboxStore } from '../store/inboxStore';
+import { useRoomsStore } from '../store/roomsStore';
 import { useStompClient } from '../hooks/useStompClient';
 import { Sidebar } from '../components/Sidebar';
 import { MessageBubble } from '../components/MessageBubble';
@@ -14,7 +15,8 @@ export function DMThreadPage() {
   const username = useAuthStore((s) => s.username);
   const setActiveThread = useInboxStore((s) => s.setActiveThread);
   const messages = useInboxStore((s) => (userId ? s.threads[userId] || [] : []));
-  const { sendPrivateMessage } = useStompClient();
+  const { sendPrivateMessage, subscribeToRoom } = useStompClient();
+  const joinRoom = useRoomsStore((s) => s.joinRoom);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -30,6 +32,12 @@ export function DMThreadPage() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  const handleJoinRoom = (id: string) => {
+    joinRoom(id);
+    subscribeToRoom(id);
+    navigate(`/room/${id}`);
+  };
+
   if (!username || !userId) return null;
 
   return (
@@ -37,6 +45,7 @@ export function DMThreadPage() {
       <Sidebar
         onRoomSelect={(id) => navigate(`/room/${id}`)}
         onDmSelect={(id) => navigate(`/dm/${id}`)}
+        onJoinRoom={handleJoinRoom}
       />
       <div className="flex-1 flex flex-col">
         <StatusBanner />

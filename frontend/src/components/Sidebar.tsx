@@ -1,16 +1,27 @@
+import { useState } from 'react';
 import { useRoomsStore } from '../store/roomsStore';
 import { useInboxStore } from '../store/inboxStore';
 
 interface Props {
   onRoomSelect: (roomId: string) => void;
   onDmSelect: (userId: string) => void;
+  onJoinRoom: (roomId: string) => void;
 }
 
-export function Sidebar({ onRoomSelect, onDmSelect }: Props) {
+export function Sidebar({ onRoomSelect, onDmSelect, onJoinRoom }: Props) {
+  const [input, setInput] = useState('');
   const rooms = useRoomsStore((s) => s.rooms);
   const activeRoom = useRoomsStore((s) => s.activeRoom);
   const threads = useInboxStore((s) => s.threads);
   const activeThread = useInboxStore((s) => s.activeThread);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key !== 'Enter') return;
+    const val = input.trim().toLowerCase().replace(/^#/, '');
+    if (!val) return;
+    onJoinRoom(val);
+    setInput('');
+  };
 
   return (
     <aside className="w-[200px] bg-surface border-r border-border flex flex-col overflow-y-auto">
@@ -29,6 +40,14 @@ export function Sidebar({ onRoomSelect, onDmSelect }: Props) {
             # {room}
           </button>
         ))}
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="#room-name"
+          className="mt-2 w-full bg-transparent border border-border rounded px-2 py-1.5 text-sm text-gray-100 placeholder-gray-500 outline-none focus:border-accent"
+        />
       </div>
       {Object.keys(threads).length > 0 && (
         <div className="p-3 pt-0">

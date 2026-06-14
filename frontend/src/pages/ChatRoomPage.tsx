@@ -13,27 +13,46 @@ export function ChatRoomPage() {
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
   const username = useAuthStore((s) => s.username);
+  const rooms = useRoomsStore((s) => s.rooms);
   const activeRoom = useRoomsStore((s) => s.activeRoom);
   const setActiveRoom = useRoomsStore((s) => s.setActiveRoom);
+  const joinRoom = useRoomsStore((s) => s.joinRoom);
   const messages = useRoomsStore((s) => s.messages[roomId || 'general'] || []);
   const setActiveThread = useInboxStore((s) => s.setActiveThread);
-  const { sendMessage, subscribeToRoom } = useStompClient();
+  const { sendMessage, subscribeToRoom, unsubscribeFromRoom } = useStompClient();
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  const prevRoomRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     if (!username) {
       navigate('/login');
       return;
     }
-    if (roomId) {
-      setActiveRoom(roomId);
-      subscribeToRoom(roomId);
+    if (!roomId) return;
+
+    if (prevRoomRef.current && prevRoomRef.current !== roomId) {
+      unsubscribeFromRoom(prevRoomRef.current);
     }
+
+    if (!rooms.includes(roomId)) {
+      joinRoom(roomId);
+    }
+
+    setActiveRoom(roomId);
+    subscribeToRoom(roomId);
+    prevRoomRef.current = roomId;
   }, [roomId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  const handleJoinRoom = (id: string) => {
+    joinRoom(id);
+    subscribeToRoom(id);
+    navigate(`/room/${id}`);
+  };
 
   if (!username) return null;
 
@@ -42,6 +61,7 @@ export function ChatRoomPage() {
       <Sidebar
         onRoomSelect={(id) => navigate(`/room/${id}`)}
         onDmSelect={(id) => navigate(`/dm/${id}`)}
+        onJoinRoom={handleJoinRoom}
       />
       <div className="flex-1 flex flex-col">
         <StatusBanner />
