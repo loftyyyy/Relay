@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useRoomsStore } from '../store/roomsStore';
 import { useInboxStore } from '../store/inboxStore';
+import { useAuthStore } from '../store/authStore';
 
 interface Props {
   onRoomSelect: (roomId: string) => void;
@@ -14,6 +15,7 @@ export function Sidebar({ onRoomSelect, onDmSelect, onJoinRoom }: Props) {
   const activeRoom = useRoomsStore((s) => s.activeRoom);
   const threads = useInboxStore((s) => s.threads);
   const activeThread = useInboxStore((s) => s.activeThread);
+  const username = useAuthStore((s) => s.username);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key !== 'Enter') return;
@@ -69,6 +71,7 @@ export function Sidebar({ onRoomSelect, onDmSelect, onJoinRoom }: Props) {
           ))}
         </div>
       )}
+      <div className="mt-auto px-3 py-2 text-xs text-gray-500 truncate">@{username}</div>
     </aside>
   );
 }

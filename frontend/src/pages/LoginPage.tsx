@@ -4,14 +4,19 @@ import { useStompClient } from '../hooks/useStompClient';
 
 export function LoginPage() {
   const [username, setUsername] = useState('');
+  const [error, setError] = useState('');
   const navigate = useNavigate();
   const { connect } = useStompClient();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username.trim()) return;
-    await connect(username.trim());
-    navigate('/room/general');
+    try {
+      await connect(username.trim());
+      navigate('/room/general');
+    } catch {
+      setError('Username already taken. Choose a different one.');
+    }
   };
 
   return (
@@ -20,11 +25,15 @@ export function LoginPage() {
         <input
           type="text"
           value={username}
-          onChange={(e) => setUsername(e.target.value)}
+          onChange={(e) => {
+            setUsername(e.target.value);
+            if (error) setError('');
+          }}
           placeholder="Username"
           autoFocus
           className="bg-surface border border-border rounded px-3 py-2.5 text-sm text-gray-100 placeholder-gray-500 outline-none focus:border-accent"
         />
+        {error && <p className="text-sm text-[#EF4444] -mt-2">{error}</p>}
         <button
           type="submit"
           disabled={!username.trim()}

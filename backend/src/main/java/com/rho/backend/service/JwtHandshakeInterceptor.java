@@ -5,6 +5,7 @@ import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.web.socket.WebSocketHandler;
@@ -14,8 +15,6 @@ import javax.crypto.SecretKey;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Map;
-
-import static org.springframework.boot.context.properties.source.ConfigurationPropertyName.isValid;
 
 public class JwtHandshakeInterceptor implements HandshakeInterceptor {
 
@@ -34,6 +33,10 @@ public class JwtHandshakeInterceptor implements HandshakeInterceptor {
         String token = extractTokenFromUri(uri);
         if (token != null && isValid(token)) {
             String username = extractUsernameFromToken(token);
+            if (!ConnectedUserRegistry.getInstance().register(username)) {
+                response.setStatusCode(HttpStatus.CONFLICT);
+                return false;
+            }
             attributes.put("username", username);
             return true;
         }

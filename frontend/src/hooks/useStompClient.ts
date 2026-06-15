@@ -21,9 +21,12 @@ async function generateToken(username: string): Promise<string> {
     .sign(secret);
 }
 
+const sharedClient: { current: Client | null } = { current: null };
+const sharedSubs: { current: Map<string, StompSubscription> } = { current: new Map() };
+
 export function useStompClient() {
-  const clientRef = useRef<Client | null>(null);
-  const subsRef = useRef<Map<string, StompSubscription>>(new Map());
+  const clientRef = sharedClient;
+  const subsRef = sharedSubs;
 
   const { username, token, login } = useAuthStore();
   const { setStatus } = useConnectionStore();
@@ -34,6 +37,7 @@ export function useStompClient() {
 
   useEffect(() => {
     if (!username || !token) return;
+    if (clientRef.current) return;
 
     const client = new Client({
       webSocketFactory: () => new SockJS(`/ws-chat?token=${token}`),
@@ -56,25 +60,13 @@ export function useStompClient() {
           addInboxMessage(chatMessage.sender, chatMessage);
         });
       },
-      onDisconnect: () => {
-        setStatus('disconnected');
-      },
-      onStompError: () => {
-        setStatus('disconnected');
-      },
-      onWebSocketClose: () => {
-        setStatus('reconnecting');
-      },
+      onDisconnect: () => setStatus('disconnected'),
+      onStompError: () => setStatus('disconnected'),
+      onWebSocketClose: () => setStatus('reconnecting'),
     });
 
     client.activate();
     clientRef.current = client;
-
-    return () => {
-      client.deactivate();
-      clientRef.current = null;
-      subsRef.current.clear();
-    };
   }, [username, token]);
 
   const subscribeToRoom = (roomId: string) => {
@@ -127,9 +119,63 @@ export function useStompClient() {
     });
   };
 
-  const connect = async (username: string) => {
+  const connect = async (username: string): Promise<void> => {
     const token = await generateToken(username);
-    login(username, token);
+
+    return new Promise<void>((resolve, reject) => {
+      if (clientRef.current) {
+        clientRef.current.deactivate();
+        subsRef.current.clear();
+      }
+
+      let settled = false;
+
+      const client = new Client({
+        webSocketFactory: () => new SockJS(`/ws-chat?token=${token}`),
+        reconnectDelay: 5000,
+        onConnect: () => {
+          if (settled) return;
+          settled = true;
+          login(username, token);
+          setStatus('connected');
+          clientRef.current = client;
+
+          const currentRooms = roomsRef.current;
+          currentRooms.forEach((roomId) => {
+            if (subsRef.current.has(roomId)) return;
+            const sub = client.subscribe(`/topic/rooms/${roomId}`, (msg) => {
+              const chatMessage: ChatMessage = JSON.parse(msg.body);
+              addRoomMessage(roomId, chatMessage);
+            });
+            subsRef.current.set(roomId, sub);
+          });
+
+          client.subscribe('/user/queue/messages', (msg) => {
+            const chatMessage: ChatMessage = JSON.parse(msg.body);
+            addInboxMessage(chatMessage.sender, chatMessage);
+          });
+
+          resolve();
+        },
+        onDisconnect: () => setStatus('disconnected'),
+        onStompError: () => {
+          if (!settled) {
+            settled = true;
+            reject(new Error('Unable to connect'));
+          }
+          setStatus('disconnected');
+        },
+        onWebSocketClose: () => {
+          if (!settled) {
+            settled = true;
+            reject(new Error('Username already taken. Choose a different one.'));
+          }
+          setStatus('reconnecting');
+        },
+      });
+
+      client.activate();
+    });
   };
 
   return { connect, sendMessage, sendPrivateMessage, subscribeToRoom, unsubscribeFromRoom };
