@@ -5,6 +5,7 @@ interface RoomsState {
   activeRoom: string;
   rooms: string[];
   messages: Record<string, ChatMessage[]>;
+  userCounts: Record<string, number>;
   setActiveRoom: (roomId: string) => void;
   addMessage: (roomId: string, message: ChatMessage) => void;
   joinRoom: (roomId: string) => void;
@@ -14,14 +15,21 @@ export const useRoomsStore = create<RoomsState>((set) => ({
   activeRoom: 'general',
   rooms: ['general', 'random'],
   messages: { general: [], random: [] },
+  userCounts: {},
   setActiveRoom: (roomId) => set({ activeRoom: roomId }),
   addMessage: (roomId, message) =>
-    set((state) => ({
-      messages: {
-        ...state.messages,
-        [roomId]: [...(state.messages[roomId] || []), message],
-      },
-    })),
+    set((state) => {
+      const updates: Partial<RoomsState> = {
+        messages: {
+          ...state.messages,
+          [roomId]: [...(state.messages[roomId] || []), message],
+        },
+      };
+      if (message.userCount !== undefined) {
+        updates.userCounts = { ...state.userCounts, [roomId]: message.userCount };
+      }
+      return updates;
+    }),
   joinRoom: (roomId) =>
     set((state) => {
       if (state.rooms.includes(roomId)) return state;

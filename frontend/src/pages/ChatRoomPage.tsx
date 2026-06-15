@@ -18,6 +18,7 @@ export function ChatRoomPage() {
   const setActiveRoom = useRoomsStore((s) => s.setActiveRoom);
   const joinRoom = useRoomsStore((s) => s.joinRoom);
   const messages = useRoomsStore((s) => s.messages[roomId || 'general'] || []);
+  const userCount = useRoomsStore((s) => (roomId ? s.userCounts[roomId] : undefined));
   const setActiveThread = useInboxStore((s) => s.setActiveThread);
   const { sendMessage, subscribeToRoom, unsubscribeFromRoom } = useStompClient();
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -66,7 +67,10 @@ export function ChatRoomPage() {
       <div className="flex-1 flex flex-col">
         <StatusBanner />
         <div className="flex-1 overflow-y-auto p-4">
-          <h2 className="text-sm font-medium text-gray-400 mb-4"># {activeRoom}</h2>
+          <h2 className="text-sm font-medium text-gray-400 mb-4">
+            # {activeRoom}
+            {userCount ? <span className="ml-2 text-xs text-gray-500 font-normal">{userCount} online</span> : null}
+          </h2>
           {messages.map((msg, i) => (
             <MessageBubble key={i} message={msg} />
           ))}

@@ -10,13 +10,7 @@ export function MessageBubble({ message }: Props) {
   const isOwn = message.sender === username;
 
   if (message.type === 'JOIN' || message.type === 'LEAVE' || message.type === 'SYSTEM') {
-    const label =
-      message.type === 'JOIN'
-        ? `${message.sender} joined`
-        : message.type === 'LEAVE'
-        ? `${message.sender} left`
-        : message.content;
-    return <p className="text-center text-sm text-gray-500 py-2">{label}</p>;
+    return <p className="text-center text-sm text-gray-500 py-2">{message.content}</p>;
   }
 
   return (

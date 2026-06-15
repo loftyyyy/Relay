@@ -5,6 +5,7 @@ export interface ChatMessage {
   content: string;
   roomId: string;
   type: MessageType;
+  userCount?: number;
 }
 
 export type ConnectionStatus = 'connected' | 'reconnecting' | 'disconnected';
