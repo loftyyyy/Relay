@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react';
 import { Client, type StompSubscription } from '@stomp/stompjs';
-import SockJS from 'sockjs-client/dist/sockjs.min.js';
 import { useAuthStore } from '../store/authStore';
 import { useConnectionStore } from '../store/connectionStore';
 import { useRoomsStore } from '../store/roomsStore';
@@ -40,7 +39,10 @@ export function useStompClient() {
     if (clientRef.current) return;
 
     const client = new Client({
-      webSocketFactory: () => new SockJS(`/ws-chat?token=${token}`),
+      webSocketFactory: () => {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        return new WebSocket(`${protocol}//${window.location.host}/ws-chat?token=${token}`);
+      },
       reconnectDelay: 5000,
       onConnect: () => {
         setStatus('connected');
@@ -131,7 +133,10 @@ export function useStompClient() {
       let settled = false;
 
       const client = new Client({
-        webSocketFactory: () => new SockJS(`/ws-chat?token=${token}`),
+        webSocketFactory: () => {
+          const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+          return new WebSocket(`${protocol}//${window.location.host}/ws-chat?token=${token}`);
+        },
         reconnectDelay: 5000,
         onConnect: () => {
           if (settled) return;
