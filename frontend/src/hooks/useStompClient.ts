@@ -6,8 +6,13 @@ import { useRoomsStore } from '../store/roomsStore';
 import { useInboxStore } from '../store/inboxStore';
 import type { ChatMessage } from '../types/chat';
 
+const API_BASE = import.meta.env.VITE_API_URL ?? '';
+const WS_BASE = API_BASE
+  ? API_BASE.replace(/^https:/, 'wss:').replace(/^http:/, 'ws:')
+  : '';
+
 async function loginApi(username: string): Promise<{ token: string; username: string }> {
-  const res = await fetch('/api/auth/login', {
+  const res = await fetch(`${API_BASE}/api/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username }),
@@ -38,8 +43,8 @@ export function useStompClient() {
 
     const client = new Client({
       webSocketFactory: () => {
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        return new WebSocket(`${protocol}//${window.location.host}/ws-chat?token=${token}`);
+        const host = WS_BASE || `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
+        return new WebSocket(`${host}/ws-chat?token=${token}`);
       },
       reconnectDelay: 5000,
       onConnect: () => {
@@ -132,8 +137,8 @@ export function useStompClient() {
 
       const client = new Client({
         webSocketFactory: () => {
-          const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-          return new WebSocket(`${protocol}//${window.location.host}/ws-chat?token=${token}`);
+          const host = WS_BASE || `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
+          return new WebSocket(`${host}/ws-chat?token=${token}`);
         },
         reconnectDelay: 5000,
         onConnect: () => {
