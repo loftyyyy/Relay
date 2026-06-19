@@ -23,7 +23,8 @@ public class ConnectedUserRegistry {
     }
 
     public boolean register(String username) {
-        return connectedUsernames.add(username);
+        connectedUsernames.add(username);
+        return true;
     }
 
     public void deregister(String username) {
