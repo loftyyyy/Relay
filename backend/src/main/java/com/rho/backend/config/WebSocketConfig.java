@@ -17,6 +17,9 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Value("${spring.jwt.secret.key}")
     private String jwtSecret;
 
+    @Value("${spring.config.allowed-origins}")
+    private String allowedOrigin;
+
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
         // Enables memory-based broker for /topic (broadcast) and /queue (private)
@@ -30,6 +33,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         registry.addEndpoint("/ws-chat")
                 .addInterceptors(new JwtHandshakeInterceptor(jwtSecret))
                 .setHandshakeHandler(new JwtHandshakeHandler())
-                .setAllowedOriginPatterns("*");
+                .setAllowedOriginPatterns("*")
+                .setAllowedOriginPatterns(allowedOrigin);
     }
 }
