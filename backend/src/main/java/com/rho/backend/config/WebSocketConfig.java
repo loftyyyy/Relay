@@ -33,7 +33,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         registry.addEndpoint("/ws-chat")
                 .addInterceptors(new JwtHandshakeInterceptor(jwtSecret))
                 .setHandshakeHandler(new JwtHandshakeHandler())
-                .setAllowedOriginPatterns("*")
                 .setAllowedOriginPatterns(allowedOrigin);
     }
 }
