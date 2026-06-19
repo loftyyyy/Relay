@@ -4,20 +4,18 @@ import { useAuthStore } from '../store/authStore';
 import { useConnectionStore } from '../store/connectionStore';
 import { useRoomsStore } from '../store/roomsStore';
 import { useInboxStore } from '../store/inboxStore';
-import { SignJWT } from 'jose';
 import type { ChatMessage } from '../types/chat';
 
-async function generateToken(username: string): Promise<string> {
-  const secretB64 = import.meta.env.VITE_JWT_SECRET;
-  if (!secretB64) {
-    throw new Error('VITE_JWT_SECRET is not set. Create frontend/.env with VITE_JWT_SECRET=<base64-encoded-secret>');
+async function loginApi(username: string): Promise<{ token: string; username: string }> {
+  const res = await fetch('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username }),
+  });
+  if (!res.ok) {
+    throw new Error('Login failed');
   }
-  const secret = Uint8Array.from(atob(secretB64), (c) => c.charCodeAt(0));
-  return await new SignJWT({})
-    .setProtectedHeader({ alg: 'HS256' })
-    .setSubject(username)
-    .setIssuedAt()
-    .sign(secret);
+  return res.json();
 }
 
 const sharedClient: { current: Client | null } = { current: null };
@@ -122,7 +120,7 @@ export function useStompClient() {
   };
 
   const connect = async (username: string): Promise<void> => {
-    const token = await generateToken(username);
+    const { token } = await loginApi(username);
 
     return new Promise<void>((resolve, reject) => {
       if (clientRef.current) {
