@@ -25,6 +25,12 @@ async function loginApi(username: string): Promise<{ token: string; username: st
 
 const sharedClient: { current: Client | null } = { current: null };
 const sharedSubs: { current: Map<string, StompSubscription> } = { current: new Map() };
+const reconnectAttempts: { current: number } = { current: 0 };
+
+function nextReconnectDelay(): number {
+  reconnectAttempts.current++;
+  return Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
+}
 
 export function useStompClient() {
   const clientRef = sharedClient;
@@ -41,13 +47,17 @@ export function useStompClient() {
     if (!username || !token) return;
     if (clientRef.current) return;
 
+    reconnectAttempts.current = 0;
+
     const client = new Client({
       webSocketFactory: () => {
         const host = WS_BASE || `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
         return new WebSocket(`${host}/ws-chat?token=${token}`);
       },
-      reconnectDelay: 5000,
+      reconnectDelay: 1000,
       onConnect: () => {
+        reconnectAttempts.current = 0;
+        client.reconnectDelay = 1000;
         setStatus('connected');
         subsRef.current.clear();
 
@@ -67,7 +77,10 @@ export function useStompClient() {
       },
       onDisconnect: () => setStatus('disconnected'),
       onStompError: () => setStatus('disconnected'),
-      onWebSocketClose: () => setStatus('reconnecting'),
+      onWebSocketClose: () => {
+        client.reconnectDelay = nextReconnectDelay();
+        setStatus('reconnecting');
+      },
     });
 
     client.activate();
@@ -140,10 +153,12 @@ export function useStompClient() {
           const host = WS_BASE || `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
           return new WebSocket(`${host}/ws-chat?token=${token}`);
         },
-        reconnectDelay: 5000,
+        reconnectDelay: 1000,
         onConnect: () => {
           if (settled) return;
           settled = true;
+          reconnectAttempts.current = 0;
+          client.reconnectDelay = 1000;
           login(username, token);
           setStatus('connected');
           clientRef.current = client;
@@ -178,6 +193,7 @@ export function useStompClient() {
             settled = true;
             reject(new Error('Username already taken. Choose a different one.'));
           }
+          client.reconnectDelay = nextReconnectDelay();
           setStatus('reconnecting');
         },
       });

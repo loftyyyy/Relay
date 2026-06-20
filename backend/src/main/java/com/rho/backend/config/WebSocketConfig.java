@@ -23,7 +23,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
         // Enables memory-based broker for /topic (broadcast) and /queue (private)
-        config.enableSimpleBroker("/topic", "/queue");
+        config.enableSimpleBroker("/topic", "/queue")
+                .setHeartbeatValue(new long[]{10000, 10000});
         config.setApplicationDestinationPrefixes("/app"); // client -> server
         config.setUserDestinationPrefix("/user"); // server specific user
     }
