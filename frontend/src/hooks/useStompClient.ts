@@ -155,11 +155,8 @@ export function useStompClient() {
         heartbeatIncoming: 10000,
         heartbeatOutgoing: 10000,
         onConnect: () => {
-          if (settled) return;
-          settled = true;
-          login(username, token);
+
           setStatus('connected');
-          clientRef.current = client;
 
           const currentRooms = roomsRef.current;
           currentRooms.forEach((roomId) => {
@@ -176,6 +173,10 @@ export function useStompClient() {
             addInboxMessage(chatMessage.sender, chatMessage);
           });
 
+          if (settled) return;
+          settled = true;
+          login(username, token);
+          clientRef.current = client;
           resolve();
         },
         onDisconnect: () => setStatus('disconnected'),
