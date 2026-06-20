@@ -50,11 +50,14 @@ export function useStompClient() {
     reconnectAttempts.current = 0;
 
     const client = new Client({
+      brokerURL: '', // avoid StompConfig warning; real URL set via webSocketFactory below
       webSocketFactory: () => {
         const host = WS_BASE || `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
         return new WebSocket(`${host}/ws-chat?token=${token}`);
       },
       reconnectDelay: 1000,
+      heartbeatIncoming: 10000,
+      heartbeatOutgoing: 10000,
       onConnect: () => {
         reconnectAttempts.current = 0;
         client.reconnectDelay = 1000;
@@ -149,11 +152,14 @@ export function useStompClient() {
       let settled = false;
 
       const client = new Client({
+        brokerURL: '', // avoid StompConfig warning; real URL set via webSocketFactory below
         webSocketFactory: () => {
           const host = WS_BASE || `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
           return new WebSocket(`${host}/ws-chat?token=${token}`);
         },
         reconnectDelay: 1000,
+        heartbeatIncoming: 10000,
+        heartbeatOutgoing: 10000,
         onConnect: () => {
           if (settled) return;
           settled = true;
