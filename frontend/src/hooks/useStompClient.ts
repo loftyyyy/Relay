@@ -71,7 +71,10 @@ export function useStompClient() {
         });
       },
       onDisconnect: () => setStatus('disconnected'),
-      onStompError: () => setStatus('disconnected'),
+      onStompError: (frame) => {
+        if (frame.headers?.message === 'Session closed.') return;
+        setStatus('disconnected');
+      },
       onWebSocketClose: () => setStatus('reconnecting'),
     });
 
@@ -176,7 +179,8 @@ export function useStompClient() {
           resolve();
         },
         onDisconnect: () => setStatus('disconnected'),
-        onStompError: () => {
+        onStompError: (frame) => {
+          if (frame.headers?.message === 'Session closed.') return;
           if (!settled) {
             settled = true;
             reject(new Error('Unable to connect'));
