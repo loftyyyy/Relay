@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Client, type StompSubscription } from '@stomp/stompjs';
+import { Client, ReconnectionTimeMode, type StompSubscription } from '@stomp/stompjs';
 import { useAuthStore } from '../store/authStore';
 import { useConnectionStore } from '../store/connectionStore';
 import { useRoomsStore } from '../store/roomsStore';
@@ -25,12 +25,6 @@ async function loginApi(username: string): Promise<{ token: string; username: st
 
 const sharedClient: { current: Client | null } = { current: null };
 const sharedSubs: { current: Map<string, StompSubscription> } = { current: new Map() };
-const reconnectAttempts: { current: number } = { current: 0 };
-
-function nextReconnectDelay(): number {
-  reconnectAttempts.current++;
-  return Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
-}
 
 export function useStompClient() {
   const clientRef = sharedClient;
@@ -47,8 +41,6 @@ export function useStompClient() {
     if (!username || !token) return;
     if (clientRef.current) return;
 
-    reconnectAttempts.current = 0;
-
     const client = new Client({
       brokerURL: '', // avoid StompConfig warning; real URL set via webSocketFactory below
       webSocketFactory: () => {
@@ -56,11 +48,11 @@ export function useStompClient() {
         return new WebSocket(`${host}/ws-chat?token=${token}`);
       },
       reconnectDelay: 1000,
+      reconnectTimeMode: ReconnectionTimeMode.EXPONENTIAL,
+      maxReconnectDelay: 30000,
       heartbeatIncoming: 10000,
       heartbeatOutgoing: 10000,
       onConnect: () => {
-        reconnectAttempts.current = 0;
-        client.reconnectDelay = 1000;
         setStatus('connected');
         subsRef.current.clear();
 
@@ -80,10 +72,7 @@ export function useStompClient() {
       },
       onDisconnect: () => setStatus('disconnected'),
       onStompError: () => setStatus('disconnected'),
-      onWebSocketClose: () => {
-        client.reconnectDelay = nextReconnectDelay();
-        setStatus('reconnecting');
-      },
+      onWebSocketClose: () => setStatus('reconnecting'),
     });
 
     client.activate();
@@ -143,9 +132,9 @@ export function useStompClient() {
   const connect = async (username: string): Promise<void> => {
     const { token } = await loginApi(username);
 
-    return new Promise<void>((resolve, reject) => {
+    return new Promise<void>(async (resolve, reject) => {
       if (clientRef.current) {
-        clientRef.current.deactivate();
+        await clientRef.current.deactivate();
         subsRef.current.clear();
       }
 
@@ -158,13 +147,13 @@ export function useStompClient() {
           return new WebSocket(`${host}/ws-chat?token=${token}`);
         },
         reconnectDelay: 1000,
+        reconnectTimeMode: ReconnectionTimeMode.EXPONENTIAL,
+        maxReconnectDelay: 30000,
         heartbeatIncoming: 10000,
         heartbeatOutgoing: 10000,
         onConnect: () => {
           if (settled) return;
           settled = true;
-          reconnectAttempts.current = 0;
-          client.reconnectDelay = 1000;
           login(username, token);
           setStatus('connected');
           clientRef.current = client;
@@ -199,7 +188,6 @@ export function useStompClient() {
             settled = true;
             reject(new Error('Username already taken. Choose a different one.'));
           }
-          client.reconnectDelay = nextReconnectDelay();
           setStatus('reconnecting');
         },
       });
