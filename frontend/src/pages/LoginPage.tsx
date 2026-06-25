@@ -20,8 +20,8 @@ export function LoginPage() {
   };
 
   return (
-    <div className="h-full flex items-center justify-center">
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4 w-72">
+    <div className="h-full flex items-center justify-center p-4">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4 w-full max-w-xs">
         <input
           type="text"
           value={username}
@@ -31,13 +31,13 @@ export function LoginPage() {
           }}
           placeholder="Username"
           autoFocus
-          className="bg-surface border border-border rounded px-3 py-2.5 text-sm text-gray-100 placeholder-gray-500 outline-none focus:border-accent"
+          className="bg-surface border border-border rounded px-4 py-3 md:px-3 md:py-2.5 text-base md:text-sm text-gray-100 placeholder-gray-500 outline-none focus:border-accent"
         />
         {error && <p className="text-sm text-[#EF4444] -mt-2">{error}</p>}
         <button
           type="submit"
           disabled={!username.trim()}
-          className="bg-accent text-white text-sm px-4 py-2.5 rounded font-medium disabled:opacity-40"
+          className="bg-accent text-white text-base md:text-sm px-4 py-3 md:py-2.5 rounded font-medium disabled:opacity-40"
         >
           Connect
         </button>
